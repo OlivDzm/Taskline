@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TaskLine-Lt Dzune</title>
+<style>
+  :root {
+    --color-bg-light: #ffffff;
+    --color-text-light: #222222;
+    --color-bg-dark: #121212;
+    --color-text-dark: #eeeeee;
+    --color-primary: #4a90e2;
+    --color-primary-dark: #357ABD;
+    --color-accent: #0c7063;
+    --color-accent-dark: #c43d63;
+    --transition-speed: 0.3s;
+  }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 800px;
+    margin: auto;
+    padding: 20px;
+    background-color: var(--color-bg-light);
+    color: var(--color-text-light);
+    transition: background-color var(--transition-speed), color var(--transition-speed);
+  }
+
+  body.dark {
+    background-color: var(--color-bg-dark);
+    color: var(--color-text-dark);
+  }
+
+  h1 {
+    text-align: center;
+    margin-bottom: 10px;
+    user-select: none;
+  }
+
+  #toggleTheme {
+    cursor: pointer;
+    background: var(--color-primary);
+    border: none;
+    color: white;
+    font-weight: bold;
+    padding: 10px 20px;
+    border-radius: 30px;
+    margin-bottom: 20px;
+    transition: background-color var(--transition-speed);
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  #toggleTheme:hover {
+    background: var(--color-primary-dark);
+  }
+
+  input, select, textarea, button {
+    margin: 8px 0;
+    padding: 10px;
+    width: 100%;
+    max-width: 400px;
+    border-radius: 6px;
+    border: 1.5px solid #ccc;
+    font-size: 1rem;
+    box-sizing: border-box;
+    transition: background-color var(--transition-speed), color var(--transition-speed), border-color var(--transition-speed);
+  }
+
+  body.dark input, 
+  body.dark select, 
+  body.dark textarea {
+    background-color: #1e1e1e;
+    border-color: #444;
+    color: var(--color-text-dark);
+  }
+
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 6px var(--color-primary);
+  }
+
+  button {
+    background-color: var(--color-accent);
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: background-color var(--transition-speed);
+  }
+
+  button:hover {
+    background-color: var(--color-accent-dark);
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 20px;
+    box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  thead {
+    background-color: var(--color-primary);
+    color: white;
+  }
+
+  body.dark thead {
+    background-color: var(--color-primary-dark);
+  }
+
+  th, td {
+    padding: 12px 15px;
+    text-align: left;
+  }
+
+  tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
+
+  body.dark tr:nth-child(even) {
+    background-color: #2a2a2a;
+  }
+
+  tr:hover {
+    background-color: var(--color-primary-light);
+  }
+
+  body.dark tr:hover {
+    background-color: #3a3a3a;
+  }
+
+  .completed {
+    text-decoration: line-through;
+    color: gray;
+    opacity: 0.7;
+  }
+
+  /* Make buttons inside table smaller */
+  td button {
+    padding: 6px 10px;
+    font-size: 0.9rem;
+    margin-right: 6px;
+    border-radius: 5px;
+  }
+
+  /* Undo message styling */
+  #undoMessage {
+    display: none;
+    margin-top: 15px;
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+    padding: 10px;
+    border-radius: 6px;
+    max-width: 400px;
+    font-weight: 600;
+  }
+
+  #undoMessage button {
+    background: transparent;
+    border: none;
+    color: #155724;
+    font-weight: bold;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+    margin-left: 8px;
+  }
+
+  #undoMessage button:hover {
+    color: #0b2e13;
+  }
+</style>
+</head>
+<body>
+  <h1>TaskLine-Lt Dzune</h1>
+  <button id="toggleTheme">Switch to Dark Mode</button>
+
+  <div>
+    <h3>Add New Task</h3>
+    <input type="text" id="taskName" placeholder="Task Name" required />
+    <textarea id="description" placeholder="Description"></textarea>
+    <input type="datetime-local" id="dueDate" required />
+    <select id="priority">
+      <option>Low</option>
+      <option selected>Medium</option>
+      <option>High</option>
+    </select>
+    <button onclick="addTask()">Add Task</button>
+  </div>
+
+  <h3>Your Tasks</h3>
+  <table id="tasksTable">
+    <thead>
+      <tr><th>Task</th><th>Description</th><th>Due Date</th><th>Priority</th><th>Status</th><th>Actions</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <!-- Undo message area -->
+  <div id="undoMessage">
+    Task deleted. <button onclick="undoDelete()">Undo</button>
+  </div>
+
+  <button onclick="downloadCSV()">Download Tasks as CSV</button>
+  <input type="file" id="uploadCSV" accept=".csv" style="display:none" onchange="loadCSV(event)" />
+  <button onclick="document.getElementById('uploadCSV').click()">Load Tasks from CSV</button>
+
+<script>
+let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+
+let lastDeletedTask = null;
+let undoTimeout = null;
+
+function saveTasks() {
+  localStorage.setItem('tasks', JSON.stringify(tasks));
+}
+
+function renderTasks() {
+  const tbody = document.querySelector("#tasksTable tbody");
+  tbody.innerHTML = "";
+  tasks.forEach((task, i) => {
+    const tr = document.createElement("tr");
+    if(task.status === 'Completed') tr.classList.add('completed');
+    tr.innerHTML = `
+      <td>${task.name}</td>
+      <td>${task.description}</td>
+      <td>${new Date(task.dueDate).toLocaleString()}</td>
+      <td>${task.priority}</td>
+      <td>${task.status}</td>
+      <td>
+        <button onclick="markComplete(${i})">Complete</button>
+        <button onclick="deleteTask(${i})">Delete</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function addTask() {
+  const name = document.getElementById('taskName').value.trim();
+  const description = document.getElementById('description').value.trim();
+  const dueDate = document.getElementById('dueDate').value;
+  const priority = document.getElementById('priority').value;
+
+  if (!name || !dueDate) {
+    alert("Please enter a task name and due date.");
+    return;
+  }
+
+  tasks.push({
+    name,
+    description,
+    dueDate,
+    priority,
+    status: 'Not Started'
+  });
+
+  saveTasks();
+  renderTasks();
+  checkReminders();
+
+  // Clear inputs
+  document.getElementById('taskName').value = '';
+  document.getElementById('description').value = '';
+  document.getElementById('dueDate').value = '';
+  document.getElementById('priority').value = 'Medium';
+}
+
+function markComplete(index) {
+  tasks[index].status = 'Completed';
+  saveTasks();
+  renderTasks();
+}
+
+function deleteTask(index) {
+  if (confirm('Delete this task?')) {
+    lastDeletedTask = { task: tasks[index], index: index };
+    tasks.splice(index, 1);
+    saveTasks();
+    renderTasks();
+
+    showUndoMessage();
+
+    clearTimeout(undoTimeout);
+    undoTimeout = setTimeout(() => {
+      lastDeletedTask = null;
+      hideUndoMessage();
+    }, 5000);
+  }
+}
+
+function undoDelete() {
+  if (lastDeletedTask) {
+    tasks.splice(lastDeletedTask.index, 0, lastDeletedTask.task);
+    saveTasks();
+    renderTasks();
+    lastDeletedTask = null;
+    clearTimeout(undoTimeout);
+    hideUndoMessage();
+  }
+}
+
+function showUndoMessage() {
+  document.getElementById('undoMessage').style.display = 'block';
+}
+
+function hideUndoMessage() {
+  document.getElementById('undoMessage').style.display = 'none';
+}
+
+function checkReminders() {
+  const now = new Date();
+  const in24h = new Date(now.getTime() + 24*60*60*1000);
+  const dueSoon = tasks.filter(t => t.status !== 'Completed' && new Date(t.dueDate) > now && new Date(t.dueDate) <= in24h);
+
+  if (dueSoon.length) {
+    let message = "⚠️ Tasks due within 24 hours:\n";
+    dueSoon.forEach(t => {
+      message += `- ${t.name} (due ${new Date(t.dueDate).toLocaleString()})\n`;
+    });
+    alert(message);
+  }
+}
+
+function downloadCSV() {
+  let csv = 'Task,Description,Due Date,Priority,Status\n';
+  tasks.forEach(t => {
+    csv += `"${t.name.replace(/"/g,'""')}","${t.description.replace(/"/g,'""')}","${t.dueDate}","${t.priority}","${t.status}"\n`;
+  });
+  const blob = new Blob([csv], {type: 'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'tasks.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function loadCSV(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const text = e.target.result;
+    const lines = text.trim().split('\n');
+    const newTasks = [];
+    for(let i=1; i<lines.length; i++){
+      const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+      newTasks.push({
+        name: cols[0].replace(/^"|"$/g, ''),
+        description: cols[1].replace(/^"|"$/g, ''),
+        dueDate: cols[2],
+        priority: cols[3],
+        status: cols[4]
+      });
+    }
+    tasks = newTasks;
+    saveTasks();
+    renderTasks();
+    alert('Tasks loaded!');
+  };
+  reader.readAsText(file);
+}
+
+// Initial render and reminder check on page load
+renderTasks();
+checkReminders();
+
+// Dark/light theme toggle
+const toggleBtn = document.getElementById('toggleTheme');
+toggleBtn.addEventListener('click', () => {
+  document.body.classList.toggle('dark');
+  toggleBtn.textContent = document.body.classList.contains('dark') ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+});
+</script>
+</body>
+</html>
